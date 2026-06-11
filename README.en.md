@@ -1,14 +1,14 @@
-<p align="right">
-  <strong>中文</strong> | <a href="./README.md">English</a>
-</p>
+<h3 align="left">
+  <a href="./README.md">中文</a> | <strong>English</strong>
+</h3>
 
 # ZWB_Codable
 
-`ZWB_Codable` 是一个基于 Swift `Codable` 的宽松解析库，用来处理后端 JSON 不稳定导致的解析失败问题，例如字段类型偶发不一致、空字符串、`null`、对象和数组互换、字段改名、IM 消息体是 JSON 字符串等。
+`ZWB_Codable` is a tolerant layer on top of Swift `Codable`. It is designed for iOS projects where backend JSON may occasionally return inconsistent types, empty strings, `null`, object/array mismatches, renamed fields, or IM payloads encoded as JSON strings.
 
-当前版本是无第三方依赖的 runtime 解码器，支持 CocoaPods 和 Swift Package Manager，最低支持 iOS 14。
+The current implementation is a dependency-free runtime decoder. It supports CocoaPods and Swift Package Manager with iOS 14+.
 
-## 安装
+## Installation
 
 Swift Package Manager:
 
@@ -22,7 +22,7 @@ CocoaPods:
 pod 'ZWB_Codable', '~> 0.1.0'
 ```
 
-## 基础用法
+## Basic Usage
 
 ```swift
 import ZWB_Codable
@@ -37,9 +37,9 @@ let model = try LiveCallModel.zwbDecode(from: #"{"callId":"123"}"#)
 print(model.callId) // Optional(123)
 ```
 
-本地声明的 Swift 类型优先。比如本地是 `Int?`，后端返回 `"123"`，最终会转成 `Int`，不会变成字符串。
+The local Swift property type wins. If local code declares `Int?`, a backend string such as `"123"` is converted to `Int`.
 
-## Bool 脏数据兜底
+## Dirty Bool Values
 
 ```swift
 final class LiveCreateCheakModel: ZWBCodable {
@@ -53,7 +53,7 @@ final class LiveCreateCheakModel: ZWBCodable {
 }
 ```
 
-后端返回：
+Backend JSON:
 
 ```json
 {
@@ -65,7 +65,7 @@ final class LiveCreateCheakModel: ZWBCodable {
 }
 ```
 
-解析结果：
+Result:
 
 ```swift
 autoIdal      == true
@@ -75,9 +75,9 @@ liveCheck     == nil
 voiceCheck    == nil
 ```
 
-## 字段映射和嵌套路径
+## Key Mapping And Nested Paths
 
-字段名偶发变化，或者字段从根节点移动到嵌套结构时，可以使用 `zwbKeyMapping`。
+Use `zwbKeyMapping` for renamed fields or nested paths.
 
 ```swift
 struct UserModel: ZWBCodable {
@@ -93,9 +93,9 @@ struct UserModel: ZWBCodable {
 }
 ```
 
-## 对象和数组兼容
+## Object And Array Compatibility
 
-如果本地模型期望对象，但后端返回数组，默认取数组第一个元素：
+If a local model expects an object but the backend returns an array, the default strategy uses the first element:
 
 ```swift
 struct Profile: ZWBCodable {
@@ -110,11 +110,11 @@ let user = try User.zwbDecode(from: #"{"profile":[{"name":"Ada"}]}"#)
 print(user.profile.name) // Ada
 ```
 
-如果本地期望数组，但后端返回对象，默认会把对象包装成单元素数组。
+If a local model expects an array but receives an object, the object is wrapped as a single element by default.
 
-## 调试日志
+## Debug Logs
 
-开启 verbose 日志后，可以看到哪个字段发生了转换或兜底，减少调试时反复跳进 `decodeIfPresent` 的问题。
+Verbose logs show which fields were converted or fell back to defaults. This helps avoid stepping into repeated manual `decodeIfPresent` fallback code during debugging.
 
 ```swift
 ZWBCodableLogger.mode = .verbose
@@ -123,16 +123,16 @@ ZWBCodableLogger.onLog = { log in
 }
 ```
 
-示例输出：
+Example output:
 
 ```text
 callId: expected Int, got String("123"), converted
 name: key not found, used type default
 ```
 
-## IM JSON 字符串解析
+## IM JSON String Decoding
 
-IM 消息体经常是 JSON 字符串。`ZWBIMDecoder` 会自动解析字符串，优先生成本地模型，同时保留原始 JSON，避免服务端结构变化时消息直接丢失。
+IM payloads often arrive as JSON strings. `ZWBIMDecoder` parses the string, tries to build the local model, and keeps the raw JSON when the body is valid JSON.
 
 ```swift
 final class GiftIMModel: ZWBCodable {
@@ -159,17 +159,17 @@ message.rawJSON?["gift"]["name"].stringValue
 message.rawJSON?["gift"]["combo"]["count"].intValue
 ```
 
-如果消息体不是 JSON，`bodyKind` 会是 `.text`，原始内容仍然保存在 `rawString`。
+If the body is not JSON, `bodyKind` is `.text` and `rawString` still contains the original IM body.
 
-## 从样本生成 IM 模型
+## Generate IM Models From Samples
 
-包内提供一个开发期模型生成工具，可以根据 IM 样本 JSON 推断 Swift 模型。
+The package includes a local generator for development-time model creation.
 
 ```bash
 swift run zwb-codable-generate --name GiftIMModel --input Example/IMGiftSample.json --class
 ```
 
-示例输出：
+Example output:
 
 ```swift
 final class GiftIMModel: ZWBCodable {
@@ -182,7 +182,7 @@ final class GiftIMModel: ZWBCodable {
 }
 ```
 
-写入或更新已有文件：
+To write or update a file:
 
 ```bash
 swift run zwb-codable-generate \
@@ -192,20 +192,20 @@ swift run zwb-codable-generate \
   --output Example/GiftIMModel.swift
 ```
 
-如果文件中已经有 `GiftIMModel`，工具会保留已有属性，只追加缺失属性。它是保守的源码合并工具，不会删除或重写你的自定义代码。
+When the output file already contains `GiftIMModel`, existing properties are kept and only missing properties are appended. This is intentionally a conservative source merge: it does not remove or rewrite your custom code.
 
-## 当前边界
+## Current Boundary
 
-runtime 版本兜底使用类型默认值：
+This runtime version falls back to type defaults:
 
 - `Int` -> `0`
 - `String` -> `""`
 - `Bool` -> `false`
 - `Array` -> `[]`
 - `Dictionary` -> `[:]`
-- `ZWBCodable` 模型 -> `init()`
-- optional -> `nil`
+- `ZWBCodable` model -> `init()`
+- optional values -> `nil`
 
-当前 runtime 版本无法读取 `var count: Int = 8` 这种自定义属性默认值里的 `8`。后续如果增加 macro 层，可以保留这些精确默认值，也可以去掉 class 里手写 `required init() {}` 的要求。
+It cannot read a custom property initializer such as `var count: Int = 8` during runtime fallback. A future macro layer can generate code that preserves those exact initializer defaults and can also remove the need for `required init() {}` on classes.
 
-模型生成器是开发期工具，会在 App 编译前更新 Swift 源码；它不会在 App 运行时给已经编译好的 Swift class 动态添加 stored property。
+The generator is a development tool. It updates Swift source files before building the app; it does not add stored properties to compiled Swift classes at runtime.
