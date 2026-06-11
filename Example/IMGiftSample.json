@@ -1,0 +1,11 @@
+{
+  "giftId": "1001",
+  "giftName": "rose",
+  "gift": {
+    "combo": {
+      "count": "10"
+    },
+    "price": 9.9
+  },
+  "isCombo": "true"
+}
