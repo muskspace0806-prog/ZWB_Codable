@@ -1,24 +1,21 @@
 import Foundation
 import ZWB_Codable
 
-final class GiftIMModel: ZWBCodable {
+@ZWB_Codable
+final class GiftIMModel {
     var giftId: Int?
     var gift: GiftIMModelGift?
     var giftName: String?
     var isCombo: Bool?
-
-    required init() {}
 }
 
-final class GiftIMModelGiftCombo: ZWBCodable {
+@ZWB_Codable
+final class GiftIMModelGiftCombo {
     var count: Int?
-
-    required init() {}
 }
 
-final class GiftIMModelGift: ZWBCodable {
+@ZWB_Codable
+final class GiftIMModelGift {
     var combo: GiftIMModelGiftCombo?
     var price: Double?
-
-    required init() {}
 }

@@ -1,7 +1,18 @@
 import XCTest
 @testable import ZWB_Codable
 
+@ZWB_Codable
+final class ZWBMacroLiveCallModel {
+    var callId: Int?
+}
+
 final class ZWB_CodableTests: XCTestCase {
+    func testMacroClassCanDecodeWithoutManualRequiredInit() throws {
+        let model = try ZWBMacroLiveCallModel.zwbDecode(from: #"{"callId":"123"}"#)
+
+        XCTAssertEqual(model.callId, 123)
+    }
+
     func testStringNumberConvertsToLocalIntType() throws {
         final class LiveCallModel: ZWBCodable {
             var callId: Int?

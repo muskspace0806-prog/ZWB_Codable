@@ -14,4 +14,5 @@ empty values, nulls, object-array mismatches, key aliases, and debug logs.
   s.ios.deployment_target = '14.0'
   s.swift_versions   = ['5.7', '5.8', '5.9', '5.10', '6.0']
   s.source_files     = 'Sources/ZWB_Codable/**/*.swift'
+  s.exclude_files    = 'Sources/ZWB_Codable/ZWB_CodableMacro.swift'
 end

@@ -5,6 +5,7 @@ struct GeneratorOptions {
     var inputPath: String?
     var outputPath: String?
     var classModels = false
+    var macroModels = false
 }
 
 enum GeneratorError: Error, CustomStringConvertible {
@@ -79,7 +80,7 @@ func run() throws {
     let json = try parseJSON(input)
     let rootObject = normalizeRootObject(json)
     let fields = inferFields(from: rootObject, modelName: options.rootName)
-    let code = renderCode(rootName: options.rootName, fields: fields, classModels: options.classModels)
+    let code = renderCode(rootName: options.rootName, fields: fields, classModels: options.classModels, macroModels: options.macroModels)
     try writeOutput(code: code, rootName: options.rootName, fields: fields, options: options)
 }
 
@@ -101,6 +102,8 @@ func parseOptions() throws -> GeneratorOptions {
             options.classModels = true
         case "--struct":
             options.classModels = false
+        case "--macro":
+            options.macroModels = true
         case "--help", "-h":
             printUsageAndExit()
         default:
@@ -220,7 +223,7 @@ func inferArrayType(from array: [Any], suggestedName: String) -> InferredType {
     return .array(inferType(from: first, suggestedName: suggestedName))
 }
 
-func renderCode(rootName: String, fields: [Field], classModels: Bool) -> String {
+func renderCode(rootName: String, fields: [Field], classModels: Bool, macroModels: Bool) -> String {
     var rendered: [String] = ["import Foundation", "import ZWB_Codable", ""]
     var emitted = Set<String>()
 
@@ -231,17 +234,21 @@ func renderCode(rootName: String, fields: [Field], classModels: Bool) -> String 
             collectNestedModels(from: field.type)
         }
 
+        if macroModels {
+            rendered.append("@ZWB_Codable")
+        }
+
         if classModels {
-            rendered.append("final class \(name): ZWBCodable {")
+            rendered.append("final class \(name)\(macroModels ? "" : ": ZWBCodable") {")
         } else {
-            rendered.append("struct \(name): ZWBCodable {")
+            rendered.append("struct \(name)\(macroModels ? "" : ": ZWBCodable") {")
         }
 
         for field in fields {
             rendered.append("    var \(field.name): \(field.type.swiftType)")
         }
 
-        if classModels {
+        if classModels && !macroModels {
             if !fields.isEmpty { rendered.append("") }
             rendered.append("    required init() {}")
         }
@@ -345,10 +352,23 @@ func extractTypeBlocks(from source: String) -> [(name: String, code: String)] {
               let startRange = Range(match.range(at: 0), in: source) else { return nil }
         let name = String(source[nameRange])
         guard let bodyRange = findTypeBodyRange(in: source, typeName: name) else { return nil }
-        let blockStart = startRange.lowerBound
+        let blockStart = attributeStartBeforeType(in: source, typeStart: startRange.lowerBound)
         let blockEnd = source.index(after: bodyRange.upperBound)
         return (name, String(source[blockStart..<blockEnd]))
     }
+}
+
+func attributeStartBeforeType(in source: String, typeStart: String.Index) -> String.Index {
+    guard typeStart > source.startIndex else { return typeStart }
+    let prefix = source[..<typeStart]
+    guard let lineStart = prefix.lastIndex(of: "\n") else { return typeStart }
+    let previousPrefix = source[..<lineStart]
+    guard let previousLineStart = previousPrefix.lastIndex(of: "\n") else { return typeStart }
+    let previousLine = source[source.index(after: previousLineStart)..<lineStart].trimmingCharacters(in: .whitespaces)
+    if previousLine == "@ZWB_Codable" {
+        return source.index(after: previousLineStart)
+    }
+    return typeStart
 }
 
 func sanitizeTypeName(_ value: String) -> String {
@@ -388,6 +408,7 @@ func printUsageAndExit() -> Never {
     Usage:
       swift run zwb-codable-generate --name GiftIMModel --input sample.json
       swift run zwb-codable-generate --name GiftIMModel --input sample.json --class
+      swift run zwb-codable-generate --name GiftIMModel --input sample.json --class --macro
 
     Options:
       --name <TypeName>    Root Swift model name. Default: ZWBGeneratedModel
@@ -395,6 +416,7 @@ func printUsageAndExit() -> Never {
       --output <path>      Write or merge generated model into a Swift file.
       --class              Generate final class models with required init().
       --struct             Generate struct models. This is the default.
+      --macro              Generate @ZWB_Codable models instead of explicit ZWBCodable conformance.
     """)
     exit(0)
 }
