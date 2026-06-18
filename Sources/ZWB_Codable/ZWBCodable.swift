@@ -12,13 +12,13 @@ public extension ZWBCodable {
     static func zwbDidFinishMapping() {}
 }
 
-public enum ZWBObjectArrayFallback {
+public enum ZWBObjectArrayFallback: Sendable {
     case firstElement
     case emptyObject
     case fail
 }
 
-public struct ZWBDecodingOptions {
+public struct ZWBDecodingOptions: Sendable {
     public var objectFromArrayFallback: ZWBObjectArrayFallback
     public var arrayFromObjectFallback: Bool
     public var parsesStringifiedJSON: Bool

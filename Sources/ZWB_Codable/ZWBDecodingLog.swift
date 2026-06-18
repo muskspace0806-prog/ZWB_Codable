@@ -1,11 +1,11 @@
 import Foundation
 
-public enum ZWBLogMode {
+public enum ZWBLogMode: Sendable {
     case none
     case verbose
 }
 
-public struct ZWBDecodingLog {
+public struct ZWBDecodingLog: Sendable {
     public let path: String
     public let message: String
 }
